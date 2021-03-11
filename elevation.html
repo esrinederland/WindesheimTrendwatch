@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Elevation</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #mapDiv {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 50%;
+        left: 0;
+      }
+      #sceneDiv {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 50%;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.18/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.18/"></script>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/views/SceneView",
+      ], function (Map, MapView, SceneView) {
+        // Create the 2D Map
+        var Map2D = new Map({
+          basemap: "hybrid",
+        });
+
+        // Create the 3D Map
+        var Map3D = new Map({
+          basemap: "hybrid",
+          ground: "world-elevation",
+        });
+
+        // Create the MapView
+        var mView = new MapView({
+          container: "mapDiv",
+          map: Map2D,
+          center: [7.654, 45.919],
+          zoom: 16,
+        });
+
+        // Create the SceneView
+        var sView = new SceneView({
+          container: "sceneDiv",
+          map: Map3D,
+          camera: {
+            position: [7.654, 45.919, 5184],
+            tilt: 0,
+          },
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="mapDiv"></div>
+    <div id="sceneDiv"></div>
+  </body>
+</html>

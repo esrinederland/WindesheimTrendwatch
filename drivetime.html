@@ -1,0 +1,194 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>Service areas</title>
+    <link
+      rel="stylesheet"
+      href="https://s3-us-west-1.amazonaws.com/patterns.esri.com/files/calcite-web/1.2.5/css/calcite-web.min.css"
+    />
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+      #expandPanel {
+        width: 400px;
+        height: 300px;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.18/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.18/"></script>
+
+    <script>
+      require([
+        "esri/config",
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/tasks/ServiceAreaTask",
+        "esri/tasks/support/ServiceAreaParameters",
+        "esri/tasks/support/FeatureSet",
+        "esri/Graphic",
+        "esri/widgets/Expand",
+      ], function (
+        esriConfig,
+        Map,
+        MapView,
+        FeatureLayer,
+        ServiceAreaTask,
+        ServiceAreaParams,
+        FeatureSet,
+        Graphic,
+        Expand
+      ) {
+        esriConfig.apiKey =
+          "AAPKe3a55ac2cbab4b0fa3359bada7e16086_CaoL7lmwlCkL0BOwcB51U7RWquYQYQZosBDDwBx1mr7ctNU2PP32kqmt4PK38g9";
+
+        const map = new Map({
+          basemap: "arcgis-navigation",
+        });
+
+        const cafeLayer = new FeatureLayer({
+          url:
+            "https://services.arcgis.com/nSZVuSZjHpEZZbRo/arcgis/rest/services/OSM_Eten_en_Drinken/FeatureServer/0",
+        });
+        map.add(cafeLayer);
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [6.095, 52.515], //Longitude, latitude
+          zoom: 15,
+        });
+
+        var expand = new Expand({
+          view: view,
+          expanded: true,
+          content: document.getElementById("expandPanel"),
+        });
+        view.ui.add(expand, "top-right");
+
+        const serviceAreaTask = new ServiceAreaTask({
+          url:
+            "https://route.arcgis.com/arcgis/rest/services/World/ServiceAreas/NAServer/ServiceArea_World/solveServiceArea",
+        });
+
+        view.on("click", function (event) {
+          const locationGraphic = createGraphic(event.mapPoint);
+
+          const driveTimeCutoffs = 0.1; //Kilometers //[5,10,15]; // Minutes //Hint: impedanceAttributeName
+          const travelMode =
+            "{'attributeParameterValues':[{'attributeName':'Avoid Private Roads','parameterName':'Restriction Usage','value':'AVOID_MEDIUM'},{'attributeName':'Walking','parameterName':'Restriction Usage','value':'PROHIBITED'},{'attributeName':'Preferred for Pedestrians','parameterName':'Restriction Usage','value':'PREFER_LOW'},{'attributeName':'WalkTime','parameterName':'Walking Speed (km/h)','value':5},{'attributeName':'Avoid Roads Unsuitable for Pedestrians','parameterName':'Restriction Usage','value':'AVOID_HIGH'}],'description':'Follows paths and roads that allow pedestrian traffic and finds solutions that optimize travel distance.','distanceAttributeName':'Kilometers','id':'yFuMFwIYblqKEefX','impedanceAttributeName':'Kilometers','name':'Walking Distance','restrictionAttributeNames':['Avoid Private Roads','Avoid Roads Unsuitable for Pedestrians','Preferred for Pedestrians','Walking'],'simplificationTolerance':2,'simplificationToleranceUnits':'esriMeters','timeAttributeName':'WalkTime','type':'WALK','useHierarchy':false,'uturnAtJunctions':'esriNFSBAllowBacktrack'}";
+
+          const serviceAreaParams = createServiceAreaParams(
+            locationGraphic,
+            travelMode,
+            driveTimeCutoffs,
+            view.spatialReference
+          );
+
+          executeServiceAreaTask(serviceAreaParams);
+        });
+
+        // Create the location graphic
+        function createGraphic(point) {
+          view.graphics.removeAll();
+          const graphic = new Graphic({
+            geometry: point,
+            symbol: {
+              type: "simple-marker",
+              color: "white",
+              size: 8,
+            },
+          });
+
+          view.graphics.add(graphic);
+          return graphic;
+        }
+
+        function createServiceAreaParams(
+          locationGraphic,
+          travelMode,
+          driveTimeCutoffs,
+          outSpatialReference
+        ) {
+          // Create one or more locations (facilities) to solve for
+          const featureSet = new FeatureSet({
+            features: [locationGraphic],
+          });
+
+          // Set all of the input parameters for the service
+          const taskParameters = new ServiceAreaParams({
+            facilities: featureSet,
+            travelMode: travelMode,
+            defaultBreaks: driveTimeCutoffs,
+            trimOuterPolygon: true,
+            outSpatialReference: outSpatialReference,
+          });
+          return taskParameters;
+        }
+
+        function executeServiceAreaTask(serviceAreaParams) {
+          return serviceAreaTask.solve(serviceAreaParams).then(
+            function (result) {
+              if (result.serviceAreaPolygons.length) {
+                // Draw each service area polygon
+                result.serviceAreaPolygons.forEach(function (graphic) {
+                  graphic.symbol = {
+                    type: "simple-fill",
+                    color: "rgba(255,50,50,.25)",
+                  };
+                  view.graphics.add(graphic, 0);
+                });
+
+                var query = cafeLayer.createQuery();
+                query.geometry = result.serviceAreaPolygons[0].geometry;
+                query.spatialRelationship = "intersects"; // this is the default
+                query.inSpatialReference = { wkid: 28992 };
+                query.outSpatialReference = { wkid: 102100 };
+                query.returnGeometry = true;
+                query.outFields = ["*"];
+
+                document.getElementById("expandPanel").innerHTML = "";
+
+                cafeLayer.queryFeatures(query).then(function (response) {
+                  response.features.forEach(function (feature) {
+                    console.log(
+                      feature.attributes.amenity,
+                      feature.attributes.name
+                    );
+                    document.getElementById("expandPanel").innerHTML +=
+                      feature.attributes.amenity +
+                      " - " +
+                      feature.attributes.name +
+                      "<br>";
+                  });
+                });
+              }
+            },
+            function (error) {
+              console.log(error);
+            }
+          );
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+    <div class="panel" id="expandPanel" role="contentinfo"></div>
+  </body>
+</html>
