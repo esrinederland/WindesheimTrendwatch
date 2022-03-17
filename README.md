@@ -1,13 +1,14 @@
 # WindesheimTrendwatch
 
-# Laat een provincie oplichten
+# Laat je wijk oplichten
 
-Door op een provincie te klikken wordt de provincie opgelicht en getoond met een andere basemap (satelliet boveop de topo basemap).
-![Provincie oplichten](images/highlight.png)
+Door op wijk te klikken wordt de wijk polygoon opgelicht.
+
+![wijk oplichten](https://github.com/esrinederland/CoolMaps/blob/51af4923d888e9bbab45212495443bcc2a963357/images/20211125_LayerBlending_small.gif?raw=true)
 <br>
 <br>
 Live kaart:
-[hier](https://esrinederland.github.io/WindesheimTrendwatch/highlight.html)
+[hier](https://esrinederland.github.io/CoolMaps/LayerBlending/index.html)
 <br>
 <br>
 
